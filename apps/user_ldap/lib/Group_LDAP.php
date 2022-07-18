@@ -288,7 +288,15 @@ class Group_LDAP extends BackendUtility implements GroupInterface, IGroupLDAP, I
 		}
 
 		$allMembers = [];
-		$members = $this->access->readAttribute($dnGroup, $this->access->connection->ldapGroupMemberAssocAttr);
+
+		/** @psalm-var array<string, string[]|bool> $rawMemberReads */
+		static $rawMemberReads = []; // runtime cache for intermediate ldap read results
+		$members = $rawMemberReads[$dnGroup] ?? null;
+		if ($members === null) {
+			$members = $this->access->readAttribute($dnGroup, $this->access->connection->ldapGroupMemberAssocAttr);
+			$rawMemberReads[$dnGroup] = $members;
+		}
+
 		if (is_array($members)) {
 			if ((int)$this->access->connection->ldapNestedGroups === 1) {
 				while ($recordDn = array_shift($members)) {
